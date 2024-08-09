@@ -27,12 +27,10 @@ function refillClearedTiles() {
         millis() - grid[col][row].clearStartTime >= SWAP_DURATION
       ) {
         hasCleared = true;
-        // If the tile is cleared, make the tiles above it fall down
         for (let r = row; r > 0; r--) {
           grid[col][r] = grid[col][r - 1];
-          grid[col][r].row = r; // Update the row number of the tile
+          grid[col][r].row = r;
         }
-        // Create a new tile at the top
         grid[col][0] = new Tile(col, 0, tileSize);
       }
     }
@@ -50,6 +48,7 @@ function refillClearedTiles() {
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
   tileSize = min(width / cols, height / rows);
+  initGame(); // Reinitialize the game to fit the new canvas size
 }
 
 function initGame() {
@@ -60,6 +59,9 @@ function initGame() {
       grid[col][row] = new Tile(col, row, tileSize);
     }
   }
+
+  // Check for matches immediately after initializing the grid
+  checkMatches();
 }
 
 function displayGrid() {
@@ -99,6 +101,7 @@ class Tile {
     this.swapStartTime = null;
     this.targetCol = null;
     this.targetRow = null;
+    this.matched = false; // New property to track if the tile is part of a match
   }
 
   display() {
@@ -159,8 +162,17 @@ class Tile {
 let selectedTile = null;
 
 function mousePressed() {
-  let col = floor(mouseX / tileSize);
-  let row = floor(mouseY / tileSize);
+  handleTileSelection(mouseX, mouseY);
+}
+
+function touchStarted() {
+  handleTileSelection(mouseX, mouseY);
+  return false; // Prevent default behavior
+}
+
+function handleTileSelection(x, y) {
+  let col = floor(x / tileSize);
+  let row = floor(y / tileSize);
 
   if (col >= 0 && col < cols && row >= 0 && row < rows) {
     if (selectedTile) {
@@ -182,25 +194,38 @@ function swapTiles(tile1, tile2) {
       tile1.color = tile2.color;
       tile2.color = tempColor;
 
-      if (!checkMatches()) {
+      checkMatches(); // Check for matches after the swap
+
+      // Check if either of the swapped tiles are part of a match
+      if (!tile1.matched && !tile2.matched) {
         console.log("No matches found. Swapping back...");
         tile1.startSwapping(tile2.col, tile2.row);
         tile2.startSwapping(tile1.col, tile1.row);
 
         setTimeout(() => {
+          // Revert the swap
           let tempColor = tile1.color;
           tile1.color = tile2.color;
           tile2.color = tempColor;
         }, SWAP_DURATION);
+      } else {
+        setTimeout(refillClearedTiles, SWAP_DURATION);
       }
     }, SWAP_DURATION);
   }
 }
 
 function checkMatches() {
-  let matchedTiles = [];
   let hasMatches = false;
 
+  // Reset matched status for all tiles
+  for (let col = 0; col < cols; col++) {
+    for (let row = 0; row < rows; row++) {
+      grid[col][row].matched = false;
+    }
+  }
+
+  // Horizontal matches
   for (let row = 0; row < rows; row++) {
     let matchLength = 1;
     for (let col = 1; col < cols; col++) {
@@ -212,7 +237,7 @@ function checkMatches() {
         if (matchLength >= 3) {
           hasMatches = true;
           for (let k = 0; k < matchLength; k++) {
-            matchedTiles.push({ col: col - 1 - k, row });
+            grid[col - 1 - k][row].matched = true;
           }
         }
         matchLength = 1;
@@ -221,11 +246,12 @@ function checkMatches() {
     if (matchLength >= 3) {
       hasMatches = true;
       for (let k = 0; k < matchLength; k++) {
-        matchedTiles.push({ col: cols - 1 - k, row });
+        grid[cols - 1 - k][row].matched = true;
       }
     }
   }
 
+  // Vertical matches
   for (let col = 0; col < cols; col++) {
     let matchLength = 1;
     for (let row = 1; row < rows; row++) {
@@ -237,7 +263,7 @@ function checkMatches() {
         if (matchLength >= 3) {
           hasMatches = true;
           for (let k = 0; k < matchLength; k++) {
-            matchedTiles.push({ col, row: row - 1 - k });
+            grid[col][row - 1 - k].matched = true;
           }
         }
         matchLength = 1;
@@ -246,13 +272,20 @@ function checkMatches() {
     if (matchLength >= 3) {
       hasMatches = true;
       for (let k = 0; k < matchLength; k++) {
-        matchedTiles.push({ col, row: rows - 1 - k });
+        grid[col][rows - 1 - k].matched = true;
       }
     }
   }
 
-  if (matchedTiles.length > 0) {
-    clearMatches(matchedTiles);
+  // Clear matched tiles
+  if (hasMatches) {
+    for (let col = 0; col < cols; col++) {
+      for (let row = 0; row < rows; row++) {
+        if (grid[col][row].matched) {
+          grid[col][row].startClearing();
+        }
+      }
+    }
   }
 
   return hasMatches;
@@ -264,25 +297,11 @@ function clearMatches(matchedTiles) {
   }
 }
 
-function touchStarted() {
-  mousePressed();
-  return false;
-}
-
 function touchMoved() {
-  mouseDragged();
+  // Prevent scrolling on touch devices
   return false;
 }
 
 function touchEnded() {
-  mouseReleased();
   return false;
-}
-
-function mouseDragged() {
-  // Not needed for this game
-}
-
-function mouseReleased() {
-  // Not needed for this game
 }
