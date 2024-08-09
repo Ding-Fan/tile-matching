@@ -2,18 +2,26 @@ let grid;
 let cols = 8;
 let rows = 8;
 let tileSize;
+let score = 0; // Global score variable
 
-const SWAP_DURATION = 500;
+const SWAP_DURATION = 300;
 
 function setup() {
-  createCanvas(windowWidth, windowHeight);
+  createCanvas(windowWidth, windowHeight + 50); // Add extra height for the score display
   tileSize = min(width / cols, height / rows);
   initGame();
+  score = 0;
 }
 
 function draw() {
   background(255);
-  displayGrid();
+
+  // Display the score
+  fill(0);
+  textSize(32);
+  text(`Score: ${score}`, 10, 35); // Position the score at the top
+
+  displayGrid(); // Draw the grid below the score
   refillClearedTiles();
 }
 
@@ -65,9 +73,13 @@ function initGame() {
 }
 
 function displayGrid() {
+  let gridOffsetY = 50; // Offset the grid to start below the score
+
   for (let col = 0; col < cols; col++) {
     for (let row = 0; row < rows; row++) {
-      grid[col][row].display();
+      grid[col][row].display(gridOffsetY);
+
+      // Highlight the selected tile
       if (
         selectedTile &&
         selectedTile.col === col &&
@@ -75,8 +87,9 @@ function displayGrid() {
       ) {
         noFill();
         stroke(255, 0, 0);
-        strokeWeight(4);
-        rect(col * tileSize, row * tileSize, tileSize, tileSize);
+        strokeWeight(4); // Set stroke weight for the rectangle
+        rect(col * tileSize, row * tileSize + gridOffsetY, tileSize, tileSize);
+        strokeWeight(1); // Reset stroke weight back to default
       }
     }
   }
@@ -104,7 +117,7 @@ class Tile {
     this.matched = false; // New property to track if the tile is part of a match
   }
 
-  display() {
+  display(gridOffsetY = 0) {
     if (this.isClearing) {
       let elapsed = millis() - this.clearStartTime;
       if (elapsed < SWAP_DURATION) {
@@ -124,8 +137,8 @@ class Tile {
           progress
         );
         let newY = lerp(
-          this.row * this.size + this.size / 2,
-          this.targetRow * this.size + this.size / 2,
+          this.row * this.size + this.size / 2 + gridOffsetY,
+          this.targetRow * this.size + this.size / 2 + gridOffsetY,
           progress
         );
         fill(this.color);
@@ -139,7 +152,7 @@ class Tile {
       stroke(0);
       ellipse(
         this.col * this.size + this.size / 2,
-        this.row * this.size + this.size / 2,
+        this.row * this.size + this.size / 2 + gridOffsetY,
         this.size,
         this.size
       );
@@ -171,8 +184,11 @@ function touchStarted() {
 }
 
 function handleTileSelection(x, y) {
+  let gridOffsetY = 50; // The same offset used when displaying the grid
+
+  // Adjust the calculation by subtracting the gridOffsetY
   let col = floor(x / tileSize);
-  let row = floor(y / tileSize);
+  let row = floor((y - gridOffsetY) / tileSize);
 
   if (col >= 0 && col < cols && row >= 0 && row < rows) {
     if (selectedTile) {
@@ -238,6 +254,7 @@ function checkMatches() {
           hasMatches = true;
           for (let k = 0; k < matchLength; k++) {
             grid[col - 1 - k][row].matched = true;
+            score++; // Increment score for each matched tile
           }
         }
         matchLength = 1;
@@ -247,6 +264,7 @@ function checkMatches() {
       hasMatches = true;
       for (let k = 0; k < matchLength; k++) {
         grid[cols - 1 - k][row].matched = true;
+        score++; // Increment score for each matched tile
       }
     }
   }
@@ -264,6 +282,7 @@ function checkMatches() {
           hasMatches = true;
           for (let k = 0; k < matchLength; k++) {
             grid[col][row - 1 - k].matched = true;
+            score++; // Increment score for each matched tile
           }
         }
         matchLength = 1;
@@ -273,6 +292,7 @@ function checkMatches() {
       hasMatches = true;
       for (let k = 0; k < matchLength; k++) {
         grid[col][rows - 1 - k].matched = true;
+        score++; // Increment score for each matched tile
       }
     }
   }
@@ -289,12 +309,6 @@ function checkMatches() {
   }
 
   return hasMatches;
-}
-
-function clearMatches(matchedTiles) {
-  for (let { col, row } of matchedTiles) {
-    grid[col][row].startClearing();
-  }
 }
 
 function touchMoved() {
