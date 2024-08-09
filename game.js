@@ -5,6 +5,13 @@ let tileSize;
 let score = 0; // Global score variable
 
 const SWAP_DURATION = 300;
+const colorCharacterMap = {
+  red: "ア",
+  green: "イ",
+  blue: "ウ",
+  yellow: "エ",
+  purple: "オ",
+};
 
 function setup() {
   createCanvas(windowWidth, windowHeight + 50); // Add extra height for the score display
@@ -100,24 +107,29 @@ class Tile {
     this.col = col;
     this.row = row;
     this.size = size;
-    this.colors = [
-      color("red"),
-      color("green"),
-      color("blue"),
-      color("yellow"),
-      color("purple"),
-    ];
-    this.color = random(this.colors);
+    this.colors = {
+      red: color("red"),
+      green: color("green"),
+      blue: color("blue"),
+      yellow: color("yellow"),
+      purple: color("purple"),
+    };
+    this.colorName = random(Object.keys(this.colors)); // Select a color name
+    this.color = this.colors[this.colorName]; // Get the actual color
+    this.character = colorCharacterMap[this.colorName]; // Assign the corresponding Japanese character
     this.isClearing = false;
     this.clearStartTime = null;
     this.isSwapping = false;
     this.swapStartTime = null;
     this.targetCol = null;
     this.targetRow = null;
-    this.matched = false; // New property to track if the tile is part of a match
+    this.matched = false; // Property to track if the tile is part of a match
   }
 
   display(gridOffsetY = 0) {
+    let x = this.col * this.size + this.size / 2;
+    let y = this.row * this.size + this.size / 2 + gridOffsetY;
+
     if (this.isClearing) {
       let elapsed = millis() - this.clearStartTime;
       if (elapsed < SWAP_DURATION) {
@@ -125,38 +137,41 @@ class Tile {
         fill(red(this.color), green(this.color), blue(this.color), alpha);
       } else {
         this.isClearing = false;
-        this.color = random(this.colors);
+        this.colorName = random(Object.keys(this.colors));
+        this.color = this.colors[this.colorName];
+        this.character = colorCharacterMap[this.colorName];
       }
     } else if (this.isSwapping) {
       let elapsed = millis() - this.swapStartTime;
       if (elapsed < SWAP_DURATION) {
         let progress = elapsed / SWAP_DURATION;
-        let newX = lerp(
+        x = lerp(
           this.col * this.size + this.size / 2,
           this.targetCol * this.size + this.size / 2,
           progress
         );
-        let newY = lerp(
+        y = lerp(
           this.row * this.size + this.size / 2 + gridOffsetY,
           this.targetRow * this.size + this.size / 2 + gridOffsetY,
           progress
         );
         fill(this.color);
         stroke(0);
-        ellipse(newX, newY, this.size, this.size);
+        ellipse(x, y, this.size, this.size);
       } else {
         this.isSwapping = false;
       }
     } else {
       fill(this.color);
       stroke(0);
-      ellipse(
-        this.col * this.size + this.size / 2,
-        this.row * this.size + this.size / 2 + gridOffsetY,
-        this.size,
-        this.size
-      );
+      ellipse(x, y, this.size, this.size);
     }
+
+    // Display the character on the tile
+    textAlign(CENTER, CENTER);
+    textSize(this.size / 2.4); // Adjust the text size to fit the tile
+    fill(0); // Use black color for the text
+    text(this.character, x, y); // Draw the character at the center of the tile
   }
 
   startClearing() {
@@ -206,9 +221,15 @@ function swapTiles(tile1, tile2) {
     tile2.startSwapping(tile1.col, tile1.row);
 
     setTimeout(() => {
+      // Swap the colors and characters
       let tempColor = tile1.color;
+      let tempCharacter = tile1.character;
+
       tile1.color = tile2.color;
+      tile1.character = tile2.character;
+
       tile2.color = tempColor;
+      tile2.character = tempCharacter;
 
       checkMatches(); // Check for matches after the swap
 
@@ -220,9 +241,14 @@ function swapTiles(tile1, tile2) {
 
         setTimeout(() => {
           // Revert the swap
-          let tempColor = tile1.color;
+          let revertColor = tile1.color;
+          let revertCharacter = tile1.character;
+
           tile1.color = tile2.color;
-          tile2.color = tempColor;
+          tile1.character = tile2.character;
+
+          tile2.color = revertColor;
+          tile2.character = revertCharacter;
         }, SWAP_DURATION);
       } else {
         setTimeout(refillClearedTiles, SWAP_DURATION);

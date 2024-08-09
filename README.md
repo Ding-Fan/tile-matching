@@ -15,3 +15,15 @@ Integrate Features Smoothly: Ensure that new features integrate seamlessly with 
 
 Recap and Summarize: After providing a solution, summarize the changes or logic to ensure clarity and ease of understanding.
 ```
+
+## resources
+
+三消游戏设计分析（上）
+三消设计分析三部曲之—元素篇
+https://www.gcores.com/articles/184271
+
+三消游戏设计分析（中）
+三消设计分析三部曲之—关卡篇
+https://www.gcores.com/articles/184974
+
+
