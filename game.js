@@ -25,8 +25,9 @@ function draw() {
 
   // Display the score
   fill(0);
+  textAlign(LEFT, TOP); // Align text to the left and top
   textSize(32);
-  text(`Score: ${score}`, 10, 35); // Position the score at the top
+  text(`Score: ${score}`, 10, 10); // Position the score at the top-left corner
 
   displayGrid(); // Draw the grid below the score
   refillClearedTiles();
