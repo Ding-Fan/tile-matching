@@ -5,6 +5,7 @@ let tileSize;
 let score = 0; // Global score variable
 
 const SWAP_DURATION = 300;
+const CLEAR_DURATION = 100;
 const colorCharacterMap = {
   red: "ア",
   green: "イ",
@@ -43,10 +44,14 @@ function refillClearedTiles() {
         millis() - grid[col][row].clearStartTime >= SWAP_DURATION
       ) {
         hasCleared = true;
+
+        // Move tiles above down one position
         for (let r = row; r > 0; r--) {
           grid[col][r] = grid[col][r - 1];
           grid[col][r].row = r;
         }
+
+        // Generate a new tile only for the top row with fixed properties
         grid[col][0] = new Tile(col, 0, tileSize);
       }
     }
@@ -115,7 +120,7 @@ class Tile {
       yellow: color("yellow"),
       purple: color("purple"),
     };
-    this.colorName = random(Object.keys(this.colors)); // Select a color name
+    this.colorName = random(Object.keys(this.colors)); // Select a color name only once
     this.color = this.colors[this.colorName]; // Get the actual color
     this.character = colorCharacterMap[this.colorName]; // Assign the corresponding Japanese character
     this.isClearing = false;
@@ -134,13 +139,21 @@ class Tile {
     if (this.isClearing) {
       let elapsed = millis() - this.clearStartTime;
       if (elapsed < SWAP_DURATION) {
-        let alpha = map(elapsed, 0, SWAP_DURATION, 255, 0);
-        fill(red(this.color), green(this.color), blue(this.color), alpha);
+        let progress = elapsed / SWAP_DURATION;
+        let newSize = lerp(this.size, 0, progress);
+
+        fill(this.color);
+        stroke(0);
+        ellipse(x, y, newSize, newSize);
+
+        // Shrink the character's size as well
+        textAlign(CENTER, CENTER);
+        textSize(newSize / 2);
+        fill(0);
+        text(this.character, x, y);
       } else {
         this.isClearing = false;
-        this.colorName = random(Object.keys(this.colors));
-        this.color = this.colors[this.colorName];
-        this.character = colorCharacterMap[this.colorName];
+        // No need to re-randomize the tile here
       }
     } else if (this.isSwapping) {
       let elapsed = millis() - this.swapStartTime;
@@ -169,10 +182,12 @@ class Tile {
     }
 
     // Display the character on the tile
-    textAlign(CENTER, CENTER);
-    textSize(this.size / 2.4); // Adjust the text size to fit the tile
-    fill(0); // Use black color for the text
-    text(this.character, x, y); // Draw the character at the center of the tile
+    if (!this.isClearing) {
+      textAlign(CENTER, CENTER);
+      textSize(this.size / 2);
+      fill(0);
+      text(this.character, x, y);
+    }
   }
 
   startClearing() {
